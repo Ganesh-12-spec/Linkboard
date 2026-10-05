@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,6 +13,7 @@ type BookmarkResponse struct {
 	Title string `json:"title"`
 	URL   string `json:"url"`
 }
+
 type CreateBookmarkRequest struct {
 	Title string `json:"title"`
 	URL   string `json:"url"`
@@ -31,7 +33,6 @@ func GetBookmark(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 		return
 	}
-
 }
 
 func CreateBookmark(w http.ResponseWriter, r *http.Request) {
@@ -59,8 +60,16 @@ func CreateBookmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := r.Context()
+
+	logRequestContext(ctx)
+
 	w.WriteHeader(http.StatusCreated)
 
 	fmt.Fprintln(w, "Title:", req.Title)
 	fmt.Fprintln(w, "URL:", req.URL)
+}
+
+func logRequestContext(ctx context.Context) {
+	fmt.Println("Request context received")
 }
