@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/Ganesh-12-spec/Linkboard/internal/handler"
 )
 
 type helloHandler struct{}
@@ -18,17 +20,9 @@ func main() {
 		fmt.Fprintln(w, "Hello from Linkboard")
 	})
 
-	mux.HandleFunc("GET /bookmarks", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Method:", r.Method)
-		fmt.Fprintln(w, "Path:", r.URL.Path)
-		fmt.Fprintln(w, "User-Agent:", r.Header.Get("User-Agent"))
-	})
+	mux.HandleFunc("GET /bookmarks", handler.GetBookmark)
 
-	mux.HandleFunc("POST /bookmarks", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Method:", r.Method)
-		fmt.Fprintln(w, "Content-Type:", r.Header.Get("Content-Type"))
-		fmt.Fprintln(w, "Request received for creating a bookmark")
-	})
+	mux.HandleFunc("POST /bookmarks", handler.CreateBookmark)
 
 	mux.HandleFunc("GET /bookmarks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
