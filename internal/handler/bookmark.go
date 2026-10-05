@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 type BookmarkResponse struct {
@@ -41,6 +42,23 @@ func CreateBookmark(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
+
+	if req.Title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+
+	if req.URL == "" {
+		http.Error(w, "url is required", http.StatusBadRequest)
+		return
+	}
+
+	parsedURL, err := url.ParseRequestURI(req.URL)
+	if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
+		http.Error(w, "invalid URL", http.StatusBadRequest)
+		return
+	}
+
 	w.WriteHeader(http.StatusCreated)
 
 	fmt.Fprintln(w, "Title:", req.Title)
