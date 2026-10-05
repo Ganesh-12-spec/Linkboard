@@ -41,6 +41,7 @@ func CreateBookmark(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
+	w.WriteHeader(http.StatusCreated)
 
 	fmt.Fprintln(w, "Title:", req.Title)
 	fmt.Fprintln(w, "URL:", req.URL)
