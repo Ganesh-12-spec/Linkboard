@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+
+	"github.com/Ganesh-12-spec/Linkboard/internal/service"
 )
 
 type BookmarkResponse struct {
@@ -64,10 +66,27 @@ func CreateBookmark(w http.ResponseWriter, r *http.Request) {
 
 	logRequestContext(ctx)
 
+	bookmarkService := service.BookmarkService{}
+
+	bookmark, err := bookmarkService.CreateBookmark(req.Title, req.URL)
+	if err != nil {
+		http.Error(w, "failed to create bookmark", http.StatusInternalServerError)
+		return
+	}
+
+	response := BookmarkResponse{
+		ID:    bookmark.ID,
+		Title: bookmark.Title,
+		URL:   bookmark.URL,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	fmt.Fprintln(w, "Title:", req.Title)
-	fmt.Fprintln(w, "URL:", req.URL)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		return
+	}
 }
 
 func logRequestContext(ctx context.Context) {
