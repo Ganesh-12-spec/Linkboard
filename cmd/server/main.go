@@ -10,8 +10,22 @@ import (
 func main() {
 	mux := http.NewServeMux()
 
-	// Router decides WHERE the HTTP request should go.
-	// The actual HTTP handling lives inside the handler package.
+	// Request flow:
+	//
+	// Client
+	//   ↓
+	// Router
+	//   ↓
+	// Handler
+	//   ↓
+	// Service
+	//   ↓
+	// Repository
+	//   ↓
+	// Storage
+	//
+	// The response travels back through the same layers.
+
 	mux.HandleFunc("GET /bookmarks", handler.GetBookmark)
 	mux.HandleFunc("POST /bookmarks", handler.CreateBookmark)
 
