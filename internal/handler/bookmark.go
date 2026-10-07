@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/Ganesh-12-spec/Linkboard/internal/repository"
 	"github.com/Ganesh-12-spec/Linkboard/internal/service"
 )
 
@@ -66,7 +67,8 @@ func CreateBookmark(w http.ResponseWriter, r *http.Request) {
 
 	logRequestContext(ctx)
 
-	bookmarkService := service.BookmarkService{}
+	bookmarkRepository := repository.BookmarkRepository{}
+	bookmarkService := service.NewBookmarkService(bookmarkRepository)
 
 	bookmark, err := bookmarkService.CreateBookmark(req.Title, req.URL)
 	if err != nil {
