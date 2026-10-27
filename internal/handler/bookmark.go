@@ -1,18 +1,18 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/Ganesh-12-spec/Linkboard/internal/repository"
 	"github.com/Ganesh-12-spec/Linkboard/internal/service"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type BookmarkResponse struct {
-	ID    int    `json:"id"`
+	ID    int64  `json:"id"`
 	Title string `json:"title"`
 	URL   string `json:"url"`
 }
@@ -22,75 +22,103 @@ type CreateBookmarkRequest struct {
 	URL   string `json:"url"`
 }
 
-func GetBookmark(w http.ResponseWriter, r *http.Request) {
-	bookmark := BookmarkResponse{
-		ID:    1,
-		Title: "Learn Go",
-		URL:   "https://go.dev",
-	}
+type BookmarkHandler struct {
+	service service.BookmarkService
+}
 
-	w.Header().Set("Content-Type", "application/json")
+func NewBookmarkHandler(db *pgxpool.Pool) *BookmarkHandler {
+	repo := repository.NewBookmarkRepository(db)
 
-	err := json.NewEncoder(w).Encode(bookmark)
-	if err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
+	return &BookmarkHandler{
+		service: service.NewBookmarkService(repo),
 	}
 }
 
-func CreateBookmark(w http.ResponseWriter, r *http.Request) {
+func (h *BookmarkHandler) GetBookmark(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	bookmarks, err := h.service.ListBookmarks(r.Context())
+	if err != nil {
+		http.Error(
+			w,
+			"failed to get bookmarks",
+			http.StatusInternalServerError,
+		)
+		return
+	}
+
+	response := make([]BookmarkResponse, 0, len(bookmarks))
+
+	for _, bookmark := range bookmarks {
+		response = append(response, BookmarkResponse{
+			ID:    bookmark.ID,
+			Title: bookmark.Title,
+			URL:   bookmark.URL,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+func (h *BookmarkHandler) CreateBookmark(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
 	var req CreateBookmarkRequest
 
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
+
+	req.Title = strings.TrimSpace(req.Title)
+	req.URL = strings.TrimSpace(req.URL)
 
 	if req.Title == "" {
 		http.Error(w, "title is required", http.StatusBadRequest)
 		return
 	}
 
-	if req.URL == "" {
-		http.Error(w, "url is required", http.StatusBadRequest)
+	if len(req.Title) > 255 {
+		http.Error(w, "title must be 255 characters or fewer", http.StatusBadRequest)
 		return
 	}
 
 	parsedURL, err := url.ParseRequestURI(req.URL)
-	if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
-		http.Error(w, "invalid URL", http.StatusBadRequest)
+	if err != nil ||
+		parsedURL.Host == "" ||
+		(parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		http.Error(w, "invalid HTTP or HTTPS URL", http.StatusBadRequest)
 		return
 	}
 
-	ctx := r.Context()
-
-	logRequestContext(ctx)
-
-	bookmarkRepository := repository.BookmarkRepository{}
-	bookmarkService := service.NewBookmarkService(bookmarkRepository)
-
-	bookmark, err := bookmarkService.CreateBookmark(req.Title, req.URL)
+	bookmark, err := h.service.CreateBookmark(
+		r.Context(),
+		req.Title,
+		req.URL,
+	)
 	if err != nil {
-		http.Error(w, "failed to create bookmark", http.StatusInternalServerError)
+		http.Error(
+			w,
+			"failed to create bookmark",
+			http.StatusInternalServerError,
+		)
 		return
-	}
-
-	response := BookmarkResponse{
-		ID:    bookmark.ID,
-		Title: bookmark.Title,
-		URL:   bookmark.URL,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		return
-	}
-}
-
-func logRequestContext(ctx context.Context) {
-	fmt.Println("Request context received")
+	_ = json.NewEncoder(w).Encode(BookmarkResponse{
+		ID:    bookmark.ID,
+		Title: bookmark.Title,
+		URL:   bookmark.URL,
+	})
 }
