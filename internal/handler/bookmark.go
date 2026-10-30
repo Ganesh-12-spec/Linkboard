@@ -2,12 +2,15 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/Ganesh-12-spec/Linkboard/internal/repository"
 	"github.com/Ganesh-12-spec/Linkboard/internal/service"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,7 +37,7 @@ func NewBookmarkHandler(db *pgxpool.Pool) *BookmarkHandler {
 	}
 }
 
-func (h *BookmarkHandler) GetBookmark(
+func (h *BookmarkHandler) ListBookmarks(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
@@ -121,4 +124,37 @@ func (h *BookmarkHandler) CreateBookmark(
 		Title: bookmark.Title,
 		URL:   bookmark.URL,
 	})
+}
+func (h BookmarkHandler) GetBookmark(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	// Step 1: Extract ID from URL and convert it to int64
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid bookmark ID", http.StatusBadRequest)
+		return
+	}
+
+	// Step 2: Call Service layer
+	bookmark, err := h.service.GetBookmark(r.Context(), id)
+	if err != nil {
+		// Step 3: Check if bookmark does not exist
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "Bookmark not found", http.StatusNotFound)
+			return
+		}
+
+		// Step 4: Handle unexpected errors
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Step 5: Send successful JSON response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(bookmark); err != nil {
+		return
+	}
 }

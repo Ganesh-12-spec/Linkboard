@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -78,4 +80,32 @@ func (r BookmarkRepository) ListBookmarks(
 	}
 
 	return bookmarks, nil
+}
+func (r BookmarkRepository) GetBookmark(
+	ctx context.Context,
+	id int64,
+) (Bookmark, error) {
+	var bookmark Bookmark
+
+	err := r.db.QueryRow(
+		ctx,
+		`SELECT id, title, url
+         FROM bookmarks
+         WHERE id = $1`,
+		id,
+	).Scan(
+		&bookmark.ID,
+		&bookmark.Title,
+		&bookmark.URL,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Bookmark{}, pgx.ErrNoRows
+		}
+
+		return Bookmark{}, err
+	}
+
+	return bookmark, nil
 }

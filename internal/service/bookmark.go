@@ -59,3 +59,15 @@ func (s BookmarkService) ListBookmarks(
 
 	return result, nil
 }
+func (s BookmarkService) GetBookmark(ctx context.Context, id int64) (Bookmark, error) {
+	bookmark, err := s.repo.GetBookmark(ctx, id)
+	if err != nil {
+		return Bookmark{}, err
+	}
+	return Bookmark{
+		ID:    bookmark.ID,
+		Title: bookmark.Title,
+		URL:   bookmark.URL,
+	}, nil
+
+}
