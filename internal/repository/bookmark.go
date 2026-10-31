@@ -46,13 +46,15 @@ func (r BookmarkRepository) CreateBookmark(
 }
 
 func (r BookmarkRepository) ListBookmarks(
-	ctx context.Context,
+	ctx context.Context, limit, offset int64,
 ) ([]Bookmark, error) {
 	rows, err := r.db.Query(
 		ctx,
 		`SELECT id, title, url
 		 FROM bookmarks
-		 ORDER BY created_at DESC, id DESC`,
+		 ORDER BY created_at DESC, id DESC
+		 LIMIT $1 OFFSET $2`,
+		limit, offset,
 	)
 	if err != nil {
 		return nil, err

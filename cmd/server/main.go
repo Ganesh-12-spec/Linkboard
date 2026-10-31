@@ -37,7 +37,8 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /bookmarks", bookmarkHandler.GetBookmark)
+	mux.HandleFunc("GET /bookmarks", bookmarkHandler.ListBookmarks)
+	mux.HandleFunc("GET /bookmarks/{id}", bookmarkHandler.GetBookmark)
 	mux.HandleFunc("POST /bookmarks", bookmarkHandler.CreateBookmark)
 
 	// Serve the frontend from the same origin as the API.

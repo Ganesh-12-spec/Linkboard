@@ -41,8 +41,9 @@ func (s BookmarkService) CreateBookmark(
 
 func (s BookmarkService) ListBookmarks(
 	ctx context.Context,
+	limit, offset int64,
 ) ([]Bookmark, error) {
-	bookmarks, err := s.repo.ListBookmarks(ctx)
+	bookmarks, err := s.repo.ListBookmarks(ctx, limit, offset)
 	if err != nil {
 		return nil, err
 	}

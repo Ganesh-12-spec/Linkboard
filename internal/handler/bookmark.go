@@ -37,11 +37,57 @@ func NewBookmarkHandler(db *pgxpool.Pool) *BookmarkHandler {
 	}
 }
 
+// C19: List bookmarks with pagination
 func (h *BookmarkHandler) ListBookmarks(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	bookmarks, err := h.service.ListBookmarks(r.Context())
+	// Read query parameters
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+
+	// Default pagination values
+	limit := int64(10)
+	offset := int64(0)
+
+	// Validate limit
+	if limitStr != "" {
+		parsedLimit, err := strconv.ParseInt(limitStr, 10, 64)
+
+		if err != nil || parsedLimit < 1 || parsedLimit > 100 {
+			http.Error(
+				w,
+				"limit must be between 1 and 100",
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		limit = parsedLimit
+	}
+
+	// Validate offset
+	if offsetStr != "" {
+		parsedOffset, err := strconv.ParseInt(offsetStr, 10, 64)
+
+		if err != nil || parsedOffset < 0 {
+			http.Error(
+				w,
+				"offset must be zero or greater",
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		offset = parsedOffset
+	}
+
+	// Call Service layer
+	bookmarks, err := h.service.ListBookmarks(
+		r.Context(),
+		limit,
+		offset,
+	)
 	if err != nil {
 		http.Error(
 			w,
@@ -51,6 +97,7 @@ func (h *BookmarkHandler) ListBookmarks(
 		return
 	}
 
+	// Convert service objects into response objects
 	response := make([]BookmarkResponse, 0, len(bookmarks))
 
 	for _, bookmark := range bookmarks {
@@ -61,10 +108,14 @@ func (h *BookmarkHandler) ListBookmarks(
 		})
 	}
 
+	// Send JSON response
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 	_ = json.NewEncoder(w).Encode(response)
 }
 
+// C17: Create bookmark
 func (h *BookmarkHandler) CreateBookmark(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -125,36 +176,35 @@ func (h *BookmarkHandler) CreateBookmark(
 		URL:   bookmark.URL,
 	})
 }
-func (h BookmarkHandler) GetBookmark(
+
+// C18: Get one bookmark by ID
+func (h *BookmarkHandler) GetBookmark(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	// Step 1: Extract ID from URL and convert it to int64
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid bookmark ID", http.StatusBadRequest)
 		return
 	}
 
-	// Step 2: Call Service layer
 	bookmark, err := h.service.GetBookmark(r.Context(), id)
 	if err != nil {
-		// Step 3: Check if bookmark does not exist
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "Bookmark not found", http.StatusNotFound)
 			return
 		}
 
-		// Step 4: Handle unexpected errors
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	// Step 5: Send successful JSON response
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	if err := json.NewEncoder(w).Encode(bookmark); err != nil {
-		return
-	}
+	_ = json.NewEncoder(w).Encode(BookmarkResponse{
+		ID:    bookmark.ID,
+		Title: bookmark.Title,
+		URL:   bookmark.URL,
+	})
 }
