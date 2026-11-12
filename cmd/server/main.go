@@ -41,6 +41,7 @@ func main() {
 	mux.HandleFunc("GET /bookmarks/{id}", bookmarkHandler.GetBookmark)
 	mux.HandleFunc("POST /bookmarks", bookmarkHandler.CreateBookmark)
 	mux.HandleFunc("PUT /bookmarks/{id}", bookmarkHandler.UpdateBookmark)
+	mux.HandleFunc("DELETE /bookmarks/{id}", bookmarkHandler.DeleteBookmark)
 
 	// Serve the frontend from the same origin as the API.
 	mux.Handle("/", http.FileServer(http.Dir("frontend")))

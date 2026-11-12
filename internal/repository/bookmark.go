@@ -93,7 +93,8 @@ func (r BookmarkRepository) GetBookmark(
 		ctx,
 		`SELECT id, title, url
          FROM bookmarks
-         WHERE id = $1`,
+         WHERE id = $1
+				  AND deleted_at IS NULL`,
 		id,
 	).Scan(
 		&bookmark.ID,
@@ -126,6 +127,7 @@ func (r BookmarkRepository) UpdateBookmark(
 		   url= $2,
 			 updated_at = now()
 			 WHERE id = $3
+			  AND deleted_at IS NULL
 			 RETURNING id, title, url `,
 		title,
 		url,
@@ -137,4 +139,25 @@ func (r BookmarkRepository) UpdateBookmark(
 	}
 
 	return bookmark, nil
+}
+func (r BookmarkRepository) DeleteBookmark(
+	ctx context.Context,
+	id int64,
+) error {
+	var deletedID int64
+
+	err := r.db.QueryRow(
+		ctx,
+		`UPDATE bookmarks
+		SET deleted_at = now()
+		WHERE id = $1
+		AND deleted_at IS NULL
+		RETURNING id`,
+		id,
+	).Scan(&deletedID)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

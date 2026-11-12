@@ -1,0 +1,2 @@
+ALTER TABLE bookmarks
+ADD COLUMN deleted_at TIMESTAMPTZ;

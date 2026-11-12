@@ -22,6 +22,7 @@ func NewBookmarkService(
 	return BookmarkService{repo: repo}
 }
 
+// C17: Create bookmark
 func (s BookmarkService) CreateBookmark(
 	ctx context.Context,
 	title string,
@@ -39,6 +40,7 @@ func (s BookmarkService) CreateBookmark(
 	}, nil
 }
 
+// C19: List bookmarks with pagination
 func (s BookmarkService) ListBookmarks(
 	ctx context.Context,
 	limit, offset int64,
@@ -61,6 +63,7 @@ func (s BookmarkService) ListBookmarks(
 	return result, nil
 }
 
+// C18: Get bookmark by ID
 func (s BookmarkService) GetBookmark(
 	ctx context.Context,
 	id int64,
@@ -76,20 +79,31 @@ func (s BookmarkService) GetBookmark(
 		URL:   bookmark.URL,
 	}, nil
 }
-
-func (s BookmarkService) UpdateBookmark(
+func(s BookmarkService) UpdateBookmark(
 	ctx context.Context,
 	id int64,
 	title, url string,
-) (Bookmark, error) {
-	bookmark, err := s.repo.UpdateBookmark(ctx, id, title, url)
+
+)(Bookmark, error){
+	bookmark, err := s.repo.UpdateBookmark(ctx,id, title, url)
 	if err != nil {
 		return Bookmark{}, err
-	}
 
+	}
 	return Bookmark{
-		ID:    bookmark.ID,
+
 		Title: bookmark.Title,
-		URL:   bookmark.URL,
+		 URL: bookmark.URL,
 	}, nil
+}
+func (s BookmarkService) DeleteBookmark(
+    ctx context.Context,
+    id int64,
+) error {
+    err := s.repo.DeleteBookmark(ctx, id)
+    if err != nil {
+        return err
+    }
+
+    return nil
 }

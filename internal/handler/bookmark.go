@@ -278,3 +278,27 @@ func (h *BookmarkHandler) UpdateBookmark(
 		URL:   bookmark.URL,
 	})
 }
+func (h *BookmarkHandler) DeleteBookmark(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		http.Error(w, "Invalid bookmark ID", http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.DeleteBookmark(r.Context(), id)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "Bookmark not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
