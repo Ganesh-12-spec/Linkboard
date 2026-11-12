@@ -111,3 +111,30 @@ func (r BookmarkRepository) GetBookmark(
 
 	return bookmark, nil
 }
+func (r BookmarkRepository) UpdateBookmark(
+	ctx context.Context,
+	id int64,
+	title, url string,
+
+) (Bookmark, error) {
+	var bookmark Bookmark
+
+	err := r.db.QueryRow(
+		ctx,
+		`UPDATE  bookmarks
+		 SET title =$1,
+		   url= $2,
+			 updated_at = now()
+			 WHERE id = $3
+			 RETURNING id, title, url `,
+		title,
+		url,
+		id,
+	).Scan(&bookmark.ID, &bookmark.Title, &bookmark.URL)
+
+	if err != nil {
+		return Bookmark{}, err
+	}
+
+	return bookmark, nil
+}

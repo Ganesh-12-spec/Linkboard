@@ -208,3 +208,73 @@ func (h *BookmarkHandler) GetBookmark(
 		URL:   bookmark.URL,
 	})
 }
+func (h *BookmarkHandler) UpdateBookmark(
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid bookmark ID", http.StatusBadRequest)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+
+	var req CreateBookmarkRequest
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	// 3. Validate input
+	req.Title = strings.TrimSpace(req.Title)
+	req.URL = strings.TrimSpace(req.URL)
+
+	if req.Title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.Title) > 255 {
+		http.Error(w, "title must be 255 characters or fewer", http.StatusBadRequest)
+		return
+	}
+
+	parsedURL, err := url.ParseRequestURI(req.URL)
+	if err != nil ||
+		parsedURL.Host == "" ||
+		(parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+		http.Error(w, "invalid HTTP or HTTPS URL", http.StatusBadRequest)
+		return
+	}
+
+	// 4. Call service layer
+	bookmark, err := h.service.UpdateBookmark(
+		r.Context(),
+		id,
+		req.Title,
+		req.URL,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.Error(w, "Bookmark not found", http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// 5. Send updated bookmark
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	_ = json.NewEncoder(w).Encode(BookmarkResponse{
+		ID:    bookmark.ID,
+		Title: bookmark.Title,
+		URL:   bookmark.URL,
+	})
+}
