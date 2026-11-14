@@ -10,6 +10,8 @@ import (
 
 	"github.com/Ganesh-12-spec/Linkboard/internal/database"
 	"github.com/Ganesh-12-spec/Linkboard/internal/handler"
+	"github.com/Ganesh-12-spec/Linkboard/internal/repository"
+	"github.com/Ganesh-12-spec/Linkboard/internal/service"
 )
 
 func main() {
@@ -22,10 +24,9 @@ func main() {
 		context.Background(),
 		5*time.Second,
 	)
+	defer cancel()
 
 	pool, err := database.NewPool(ctx, connString)
-	cancel()
-
 	if err != nil {
 		log.Fatalf("database startup failed: %v", err)
 	}
@@ -33,8 +34,15 @@ func main() {
 
 	log.Println("Connected to PostgreSQL")
 
+	// Bookmark handler
 	bookmarkHandler := handler.NewBookmarkHandler(pool)
 
+	// User registration
+	userRepo := repository.NewUserRepository(pool)
+	userService := service.NewUserService(userRepo)
+	authHandler := handler.NewAuthHandler(userService)
+
+	// Routes
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /bookmarks", bookmarkHandler.ListBookmarks)
@@ -43,7 +51,9 @@ func main() {
 	mux.HandleFunc("PUT /bookmarks/{id}", bookmarkHandler.UpdateBookmark)
 	mux.HandleFunc("DELETE /bookmarks/{id}", bookmarkHandler.DeleteBookmark)
 
-	// Serve the frontend from the same origin as the API.
+	mux.HandleFunc("POST /auth/register", authHandler.Register)
+
+	// Serve frontend
 	mux.Handle("/", http.FileServer(http.Dir("frontend")))
 
 	server := &http.Server{
