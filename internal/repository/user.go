@@ -48,3 +48,30 @@ func (r UserRepository) CreateUser(
 
 	return user, nil
 }
+
+func (r UserRepository) GetUserByEmail(
+	ctx context.Context,
+	email string,
+) (User, error) {
+	var user User
+
+	err := r.db.QueryRow(
+		ctx,
+		`SELECT id, name, email, password_hash, created_at
+         FROM users
+         WHERE email = $1`,
+		email,
+	).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.PasswordHash,
+		&user.CreatedAt,
+	)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
+}
