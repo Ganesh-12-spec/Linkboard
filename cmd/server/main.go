@@ -50,8 +50,8 @@ func main() {
 	mux.HandleFunc("POST /bookmarks", bookmarkHandler.CreateBookmark)
 	mux.HandleFunc("PUT /bookmarks/{id}", bookmarkHandler.UpdateBookmark)
 	mux.HandleFunc("DELETE /bookmarks/{id}", bookmarkHandler.DeleteBookmark)
-
-	mux.HandleFunc("POST /auth/register", authHandler.Register)
+	mux.HandleFunc("POST /auth.go/register", authHandler.Register)
+	mux.HandleFunc("POST /auth.go/login", authHandler.Login)
 
 	// Serve frontend
 	mux.Handle("/", http.FileServer(http.Dir("frontend")))
